@@ -17,9 +17,11 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
 
 module Main where
 
@@ -34,38 +36,44 @@ import           System.Environment    (getArgs)
 import           System.Posix.Files    (createSymbolicLink)
 import           Types
 
+type AppContext m = (MonadIO m, MonadError String m)
+
 main :: IO ()
-main =
-  let execute = \case
-        [command, i, o] -> process command i o
-        _               -> throwError "Invalid arguments."
-      finalize = \case
+main = getArgs
+       >>= runExceptT . execute
+       >>= finalize
+  where
+    finalize = \case
         Right _       -> putStrLn "Sucess"
         Left  message -> error $  "Failure: " <> message
-  in
-    getArgs
-    >>= runExceptT . execute
-    >>= finalize
-  where
+
+    execute ::  AppContext m => [String] -> m ()
+    execute = \case
+      [command, i, o] -> process command i o
+      _               -> throwError "Invalid arguments."
+
+    process ::  AppContext m => String -> FilePath -> FilePath -> m ()
     process "bundle"  i o = bundle  i o
     process "deliver" i o = deliver i o
     process x         _ _ = throwError $ "Unknown command: " <> x
 
 -- Don't ask my why I append "/./" =)
-bundle :: (MonadIO m, MonadError String m) => FilePath -> FilePath -> m ()
+bundle ::  AppContext m => FilePath -> FilePath -> m ()
 bundle i o = liftIO  (B.writeFile o . encode =<< readDirectoryWith pure (i <> "/./"))
 
-deliver :: (MonadIO m, MonadError String m) => FilePath -> FilePath -> m ()
-deliver i o =
-  let link = liftIO . writeDirectoryWith (flip createSymbolicLink) . replaceRoot o
-      checkSuccess written
-        | (anyFailed . dirTree) written = throwError $ "Delivery failure: " <> extractErrors (flattenDir $ dirTree written)
-        | otherwise                     = pure ()
-  in
-    (liftIO . B.readFile) i
-    >>= mapM link . decodeDirectory
-    >>= either throwError checkSuccess
+deliver ::  AppContext m => FilePath -> FilePath -> m ()
+deliver i o = (liftIO . B.readFile) i
+              >>= mapM (linkToDirectory o) . decodeDirectory
+              >>= either throwError checkSuccess
   where
+    linkToDirectory ::  AppContext m => String -> WithFilePath AnchoredDirTree -> m (AnchoredDirTree ())
+    linkToDirectory d = liftIO . writeDirectoryWith (flip createSymbolicLink) . replaceRoot d
+
+    checkSuccess ::  AppContext m => AnchoredDirTree () -> m ()
+    checkSuccess written
+      | (anyFailed . dirTree) written = throwError $ "Delivery failure: " <> extractErrors (flattenDir $ dirTree written)
+      | otherwise                     = pure ()
+
     extractErrors :: [] (DirTree ()) -> String
     extractErrors [] = ""
     extractErrors (Failed p e:xs) = "path=" <> p <> ", error=" <> show e <> "\n" <> extractErrors xs
