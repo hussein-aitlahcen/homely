@@ -21,6 +21,7 @@
 
 module Main where
 
+import           Control.Monad         ((>=>))
 import           Data.Aeson            (eitherDecode, encode)
 import qualified Data.ByteString.Lazy  as B
 import           Data.Semigroup        ((<>))
@@ -37,26 +38,28 @@ getCommand "deliver" = Deliver
 getCommand _         = Unknown
 
 main :: IO ()
-main = getArgs >>= \case
-  [command, input, output] -> process (getCommand command) input output
-  _                        -> putStrLn "Invalid arguments."
+main = let executeCommand = \case
+             [command, i, o] -> process (getCommand command) i o
+             _               -> putStrLn "Invalid arguments."
+       in executeCommand =<< getArgs
   where
-    process Bundle  i o = bundle  i o
-    process Deliver i o = deliver i o
-    process Unknown _ _ = putStrLn "Unknown command."
+    process Bundle  = bundle
+    process Deliver = deliver
+    process Unknown = const . const $ putStrLn "Unknown command."
 
 bundle :: FilePath -> FilePath -> IO ()
-bundle i o = B.writeFile o =<< encode <$> readDirectoryWith pure i
+bundle i o = B.writeFile o . encode =<< readDirectoryWith pure i
 
 deliver :: FilePath -> FilePath -> IO ()
-deliver i o = B.readFile i >>= mapM (writeDirectoryWith (flip createSymbolicLink) . replaceRoot o) . decodeDir
-  >>=
-  \case
-    Right _      -> putStrLn "Sucessfully linked files."
-    Left message -> putStrLn $ "Delivery failed: " <> message
+deliver i o =
+  let link = writeDirectoryWith (flip createSymbolicLink) . replaceRoot o
+      write = \case
+        Right _      -> putStrLn   "Sucessfully linked files."
+        Left message -> putStrLn $ "Delivery failed: " <> message
+  in B.readFile i >>= (mapM link . decodeDirectory >=> write)
   where
-    decodeDir :: B.ByteString -> Either String (WithFilePath AnchoredDirTree)
-    decodeDir = eitherDecode
+    decodeDirectory :: B.ByteString -> Either String (WithFilePath AnchoredDirTree)
+    decodeDirectory = eitherDecode
 
     replaceRoot :: String -> WithFilePath AnchoredDirTree -> WithFilePath AnchoredDirTree
     replaceRoot newRoot (_ :/ tree) = newRoot :/ tree
