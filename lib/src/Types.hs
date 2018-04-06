@@ -19,7 +19,6 @@
 
 -- Sorry guys
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -55,10 +54,10 @@ instance FromJSON (WithFilePath DirTree) where
     kind <- o .: "kind"
     case kind of
       "directory" -> Dir  <$> o .: "name" <*> o .: "contents"
-      "file"      -> File <$> o .: "name" <*> o .: "absolute"
-      _           -> fail ("invalid tree object: " ++ kind)
+      "file"      -> File <$> o .: "name" <*> o .: "origin"
+      _           -> fail ("invalid tree object: kind=" ++ kind)
 
 instance ToJSON (WithFilePath DirTree) where
   toJSON (Dir p c)    = object ["kind" .= dirType,  "name" .= p, "contents" .= c]
-  toJSON (File p c)   = object ["kind" .= fileType, "name" .= p, "absolute" .= c]
+  toJSON (File p o)   = object ["kind" .= fileType, "name" .= p, "origin"   .= o]
   toJSON (Failed _ _) = error "errors should not be serialized"

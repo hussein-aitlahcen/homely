@@ -4,7 +4,7 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, aeson, base, bytestring, directory-tree
+  f = { mkDerivation, aeson, base, bytestring, directory-tree, mtl
       , stdenv, text, unix
       }:
       mkDerivation {
@@ -14,7 +14,7 @@ let
         isLibrary = false;
         isExecutable = true;
         executableHaskellDepends = [
-          aeson base bytestring directory-tree text unix
+          aeson base bytestring directory-tree mtl text unix
         ];
         license = stdenv.lib.licenses.gpl3;
       };

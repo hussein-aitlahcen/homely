@@ -17,49 +17,63 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Main where
 
-import           Control.Monad         ((>=>))
+import           Control.Monad.Except  (MonadError, MonadIO, liftIO, runExceptT,
+                                        throwError)
 import           Data.Aeson            (eitherDecode, encode)
 import qualified Data.ByteString.Lazy  as B
 import           Data.Semigroup        ((<>))
-import           System.Directory.Tree (readDirectoryWith, writeDirectoryWith)
+import           System.Directory.Tree (anyFailed, flattenDir,
+                                        readDirectoryWith, writeDirectoryWith)
 import           System.Environment    (getArgs)
 import           System.Posix.Files    (createSymbolicLink)
 import           Types
 
-data Command = Bundle | Deliver | Unknown
-
-getCommand :: String -> Command
-getCommand "bundle"  = Bundle
-getCommand "deliver" = Deliver
-getCommand _         = Unknown
-
 main :: IO ()
-main = let executeCommand = \case
-             [command, i, o] -> process (getCommand command) i o
-             _               -> putStrLn "Invalid arguments."
-       in executeCommand =<< getArgs
+main =
+  let execute = \case
+        [command, i, o] -> process command i o
+        _               -> throwError "Invalid arguments."
+      finalize = \case
+        Right _       -> putStrLn "Sucess"
+        Left  message -> error $  "Failure: " <> message
+  in
+    getArgs
+    >>= runExceptT . execute
+    >>= finalize
   where
-    process Bundle  = bundle
-    process Deliver = deliver
-    process Unknown = const . const $ putStrLn "Unknown command."
+    process "bundle"  i o = bundle  i o
+    process "deliver" i o = deliver i o
+    process x         _ _ = throwError $ "Unknown command: " <> x
 
-bundle :: FilePath -> FilePath -> IO ()
-bundle i o = B.writeFile o . encode =<< readDirectoryWith pure i
+-- Don't ask my why I append "/./" =)
+bundle :: (MonadIO m, MonadError String m) => FilePath -> FilePath -> m ()
+bundle i o = liftIO  (B.writeFile o . encode =<< readDirectoryWith pure (i <> "/./"))
 
-deliver :: FilePath -> FilePath -> IO ()
+deliver :: (MonadIO m, MonadError String m) => FilePath -> FilePath -> m ()
 deliver i o =
-  let link = writeDirectoryWith (flip createSymbolicLink) . replaceRoot o
-      write = \case
-        Right _      -> putStrLn   "Sucessfully linked files."
-        Left message -> putStrLn $ "Delivery failed: " <> message
-  in B.readFile i >>= (mapM link . decodeDirectory >=> write)
+  let link = liftIO . writeDirectoryWith (flip createSymbolicLink) . replaceRoot o
+      checkSuccess written
+        | (anyFailed . dirTree) written = throwError $ "Delivery failure: " <> extractErrors (flattenDir $ dirTree written)
+        | otherwise                     = pure ()
+  in
+    (liftIO . B.readFile) i
+    >>= mapM link . decodeDirectory
+    >>= either throwError checkSuccess
   where
-    decodeDirectory :: B.ByteString -> Either String (WithFilePath AnchoredDirTree)
-    decodeDirectory = eitherDecode
+    extractErrors :: [] (DirTree ()) -> String
+    extractErrors [] = ""
+    extractErrors (Failed p e:xs) = "path=" <> p <> ", error=" <> show e <> "\n" <> extractErrors xs
+    extractErrors (_:xs) = extractErrors xs
+
+    decodeDirectory :: (MonadError String m) => B.ByteString -> m (WithFilePath AnchoredDirTree)
+    decodeDirectory = either throwError pure . eitherDecode
 
     replaceRoot :: String -> WithFilePath AnchoredDirTree -> WithFilePath AnchoredDirTree
     replaceRoot newRoot (_ :/ tree) = newRoot :/ tree
+
