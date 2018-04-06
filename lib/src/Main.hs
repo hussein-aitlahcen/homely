@@ -43,6 +43,7 @@ main = getArgs
        >>= runExceptT . execute
        >>= finalize
   where
+    finalize :: Either String a -> IO ()
     finalize = \case
         Right _       -> putStrLn "Sucess"
         Left  message -> error $  "Failure: " <> message
