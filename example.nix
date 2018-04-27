@@ -6,8 +6,8 @@ mkHomely {
     name = "hussein-dotfiles";
     src = fetchgit {
       url = "https://github.com/hussein-aitlahcen/dotfiles";
-      rev = "c2af9631b263af768da9e1dc7e17fb22ef6ebe5e";
-      sha256 = "1djw7gmrjlna8dl9mmr2gklszmgpiry31vr3w0bhxfhiv4khdmsd";
+      rev = "edc83816e45003c4b9b949dc955bffa973a548e8";
+      sha256 = "0f5hvldwjrn6f791kafnz3rhnvax2sjks9hyjb755zcvhz9h6i2c";
     };
     installPhase = ''
       mkdir $out
