@@ -47,7 +47,7 @@ main = getArgs
   where
     finalize :: Either String a -> IO ()
     finalize = \case
-        Right _       -> putStrLn "Sucess"
+        Right _       -> putStrLn "Success"
         Left  message -> error $  "Failure: " <> message
 
     execute ::  AppContext m => [String] -> m ()
