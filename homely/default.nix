@@ -2,8 +2,16 @@
 rec {
   homely = callPackage ../lib/default.nix { };
   user = builtins.getEnv "USER";
-  mkHomely = { directory }:
+  mkHomely = { dotfiles }:
     let
+      directory = stdenv.mkDerivation {
+        name = "${user}-dotfiles";
+        src = dotfiles;
+        installPhase = ''
+          mkdir $out
+          cp -a . $out
+        '';
+      };
       directoryTree = "$out/${user}.json";
       callHomely = "${homely}/bin/homely";
     in
