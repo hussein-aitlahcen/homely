@@ -1,7 +1,8 @@
 { stdenv, pkgs, callPackage }:
 rec {
   homely = callPackage ../lib/default.nix { };
-  mkHomely = { user, directory }:
+  user = builtins.getEnv "USER";
+  mkHomely = { directory }:
     let
       directoryTree = "$out/${user}.json";
       callHomely = "${homely}/bin/homely";
