@@ -4,6 +4,10 @@ NixOS is our home.
 
 This tool is experimental.
 
+It download you dotfiles, make a `json` definition of it and symlink everything in your home.
+
+Files are readonly thanks to nix store.
+
 ## Getting started
 
 1. Supply your own **username** and **dotfiles** repository in `example.nix`
