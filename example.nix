@@ -1,7 +1,7 @@
 with import <nixpkgs> {};
 with import ./homely { inherit stdenv; inherit pkgs; inherit callPackage; };
 mkHomely rec {
-  user = "hussein";
+  user = builtins.getEnv "USER";
   directory = stdenv.mkDerivation {
     name = "${user}-dotfiles";
     src = fetchgit {
