@@ -33,9 +33,9 @@ import           Data.Semigroup        ((<>))
 import           System.Directory.Tree (anyFailed, flattenDir,
                                         readDirectoryWith, writeDirectoryWith)
 import           System.Environment    (getArgs)
-import           System.Posix.Files    (FileStatus, createSymbolicLink,
-                                        fileExist, getSymbolicLinkStatus,
-                                        isSymbolicLink, removeLink)
+import           System.Posix.Files    (createSymbolicLink, fileExist,
+                                        getSymbolicLinkStatus, isSymbolicLink,
+                                        removeLink)
 import           Types
 
 type AppContext m = (MonadIO m, MonadError String m)
