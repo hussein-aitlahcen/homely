@@ -72,14 +72,18 @@ deliver i o = (liftIO . B.readFile) i
     linkToDirectory ::  AppContext m => String -> WithFilePath AnchoredDirTree -> m (AnchoredDirTree ())
     linkToDirectory d = liftIO . writeDirectoryWith writeSymbolicLink . replaceRoot d
       where
-        writeSymbolicLink target source = do
-          exist <- fileExist target
-          when exist $ do
+        writeSymbolicLink :: FilePath -> FilePath -> IO ()
+        writeSymbolicLink target source =
+          (checkOverride target =<< fileExist target)
+          *> createSymbolicLink source target
+
+        checkOverride :: FilePath -> Bool -> IO ()
+        checkOverride _      False = pure ()
+        checkOverride target True  = do
             symbolic <- isSymbolicLink <$> getSymbolicLinkStatus target
             if not symbolic
               then error    ("Not symbolic file already exists: " <> target)
               else putStrLn ("Overwriting symbolic link: " <> target) *> removeLink target
-          createSymbolicLink source target
 
     checkSuccess ::  AppContext m => AnchoredDirTree () -> m ()
     checkSuccess written
