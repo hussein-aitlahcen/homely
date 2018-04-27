@@ -26,14 +26,16 @@
 module Main where
 
 import           Control.Monad.Except  (MonadError, MonadIO, liftIO, runExceptT,
-                                        throwError)
+                                        throwError, when)
 import           Data.Aeson            (eitherDecode, encode)
 import qualified Data.ByteString.Lazy  as B
 import           Data.Semigroup        ((<>))
 import           System.Directory.Tree (anyFailed, flattenDir,
                                         readDirectoryWith, writeDirectoryWith)
 import           System.Environment    (getArgs)
-import           System.Posix.Files    (createSymbolicLink)
+import           System.Posix.Files    (FileStatus, createSymbolicLink,
+                                        fileExist, getSymbolicLinkStatus,
+                                        isSymbolicLink, removeLink)
 import           Types
 
 type AppContext m = (MonadIO m, MonadError String m)
@@ -68,7 +70,16 @@ deliver i o = (liftIO . B.readFile) i
               >>= either throwError checkSuccess
   where
     linkToDirectory ::  AppContext m => String -> WithFilePath AnchoredDirTree -> m (AnchoredDirTree ())
-    linkToDirectory d = liftIO . writeDirectoryWith (flip createSymbolicLink) . replaceRoot d
+    linkToDirectory d = liftIO . writeDirectoryWith writeSymbolicLink . replaceRoot d
+      where
+        writeSymbolicLink target source = do
+          exist <- fileExist target
+          when exist $ do
+            symbolic <- isSymbolicLink <$> getSymbolicLinkStatus target
+            if not symbolic
+              then error    ("Not symbolic file already exists: " <> target)
+              else putStrLn ("Overwriting symbolic link: " <> target) *> removeLink target
+          createSymbolicLink source target
 
     checkSuccess ::  AppContext m => AnchoredDirTree () -> m ()
     checkSuccess written
