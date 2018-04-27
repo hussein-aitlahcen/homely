@@ -4,7 +4,6 @@ rec {
   mkHomely = { user, directory }:
     let
       directoryTree = "$out/${user}.json";
-      deliveryPath = "/nix/var/nix/profiles/per-user/${user}/homely/";
       callHomely = "${homely}/bin/homely";
     in
       stdenv.mkDerivation {
@@ -12,8 +11,7 @@ rec {
         builder = pkgs.writeText "builder.sh" ''
           . $stdenv/setup
           mkdir -p $out
-          ${callHomely} bundle  ${directory}     ${directoryTree}
-          ${callHomely} deliver ${directoryTree} $out
+          ${callHomely} bundle ${directory} ${directoryTree}
         '';
       };
 }
