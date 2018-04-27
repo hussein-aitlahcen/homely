@@ -4,7 +4,7 @@ NixOS is our home.
 
 This tool is experimental.
 
-It download you dotfiles, make a `json` definition of it and symlink everything in your home.
+Minimalistic behavior: it download you dotfiles, make a `json` definition of it and symlink everything in your home.
 
 Files are readonly thanks to nix store.
 
