@@ -1,9 +1,9 @@
 with import <nixpkgs> {};
 with import ./homely { inherit stdenv; inherit pkgs; inherit callPackage; };
-mkHomely {
+mkHomely rec {
   user = "hussein";
   directory = stdenv.mkDerivation {
-    name = "hussein-dotfiles";
+    name = "${user}-dotfiles";
     src = fetchgit {
       url = "https://github.com/hussein-aitlahcen/dotfiles";
       rev = "edc83816e45003c4b9b949dc955bffa973a548e8";
