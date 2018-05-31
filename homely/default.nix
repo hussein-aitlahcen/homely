@@ -1,6 +1,6 @@
 { stdenv, pkgs, callPackage }:
 rec {
-  homely = callPackage ../lib/default.nix { };
+  homely = callPackage ../lib/shell.nix { };
   user = builtins.getEnv "USER";
   mkHomely = { dotfiles }:
     let
