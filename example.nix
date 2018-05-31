@@ -3,7 +3,7 @@ with import ./homely { inherit stdenv; inherit pkgs; inherit callPackage; };
 mkHomely {
   dotfiles = fetchgit {
     url = "https://github.com/hussein-aitlahcen/dotfiles";
-    rev = "edc83816e45003c4b9b949dc955bffa973a548e8";
-    sha256 = "0f5hvldwjrn6f791kafnz3rhnvax2sjks9hyjb755zcvhz9h6i2c";
+    rev = "d43a5ba1124d7603b4714b6007d9271efbbf160e";
+    sha256 = "190w6h4fwkv17m1rm1sf1c9m6b59dpanwnfm8yrbwaxq1f5vcjar";
   };
 }
