@@ -10,6 +10,6 @@ Files are readonly thanks to nix store.
 
 ## Getting started
 
-1. Supply your own **dotfiles** repository in `example.nix`
+1. Supply your own **DOTFILES_URL** repository in `install.sh`
 2. Run `./install.sh`
 3. Feel like if you were at home
