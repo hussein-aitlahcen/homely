@@ -31,6 +31,7 @@ import           Control.Monad.Except        (MonadError, MonadIO, liftIO,
 import           Control.Monad.Writer.Strict (MonadWriter, runWriterT, tell)
 import           Data.Aeson                  (eitherDecode, encode)
 import qualified Data.ByteString.Lazy        as B
+import           Data.Functor                (($>))
 import           Data.Semigroup              ((<>))
 import           System.Directory.Tree       (anyFailed, flattenDir,
                                               readDirectoryWith,
@@ -92,7 +93,7 @@ deliver i o = (liftIO . B.readFile) i
           createSymbolicLink source target
 
     avoidOverriding :: AppContext m => WithFilePath AnchoredDirTree -> m (WithFilePath AnchoredDirTree)
-    avoidOverriding root@(base:/tree) = checkNode base tree *> pure root
+    avoidOverriding root@(base:/tree) = checkNode base tree $> root
       where
         checkNode :: AppContext m => FilePath -> WithFilePath DirTree -> m ()
         checkNode b (Dir n c)           = void $ traverse (checkNode (b </> n)) c
@@ -103,10 +104,11 @@ deliver i o = (liftIO . B.readFile) i
     checkOverride target = do
       alreadyExists <- liftIO $ fileExist target
       if alreadyExists
-        then do symbolic <- liftIO $ isSymbolicLink <$> getSymbolicLinkStatus target
-                if symbolic
-                  then tell [Overwrite target]
-                  else throwError $ "Collision with true file: " <> target
+        then do
+          symbolic <- liftIO $ isSymbolicLink <$> getSymbolicLinkStatus target
+          if symbolic
+            then tell [Overwrite target]
+            else throwError $ "Collision with true file: " <> target
         else tell [New target]
 
     checkSuccess ::  AppContext m => AnchoredDirTree () -> m ()
